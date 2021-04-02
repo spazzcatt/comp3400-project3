@@ -1,0 +1,14 @@
+--- ../cgi-src/shutdown.c	2021-03-30 21:02:14.000000000 -0400
++++ ckstyle/shutdown.c.gnu	2021-04-01 21:11:31.441126590 -0400
+@@ -20,8 +20,8 @@
+   // Once this program finishes running, the server should shut itself down.
+   // (This shutdown is handled in serve.c, not here.)
+   printf ("<html>\n");
+-  printf("<head>\n  <title>Success!</title>\n</head>\n");
+-  printf("<body>\n  <p>Server has stopped</p>\n</body>\n");
+-  printf("</html>\n");
++  printf ("<head>\n  <title>Success!</title>\n</head>\n");
++  printf ("<body>\n  <p>Server has stopped</p>\n</body>\n");
++  printf ("</html>\n");
+   return 0;
+ }

@@ -1,0 +1,162 @@
+--- ../server.c	2021-03-31 11:14:35.000000000 -0400
++++ ckstyle/server.c.gnu	2021-04-01 21:11:31.465126540 -0400
+@@ -21,7 +21,7 @@
+   char *boundary = NULL;
+   char *body = NULL;
+   ssize_t size = retrieve_request (connfd, &method, &uri, &query, &version,
+-                                  &boundary, &body);
++                                   &boundary, &body);
+   if (size < 0)
+     {
+       // Ignore certain types of request (such as favicon.ico)
+@@ -59,79 +59,81 @@
+   // files, you will need to pipe/fork/dup2/exec the program. Also, note that
+   // the query string will need to be passed using an environment variable
+   // called "QUERY_STRING".
+-  
+-  //added by Chris
+-  if(strstr(uri,"srv_root") != NULL)
+-  {
+-    //replace with contents of HTML file
+-    char *response = html_response (uri, version);
+-    write (connfd, response, strlen (response));
+-  }    
+-  
+-  else if(strstr(uri,"cgi-bin") != NULL)
+-  {
+-    int fd[2];
+-    pipe(fd);
+-    pid_t child = fork();
+-    if(child == 0)
++
++  // added by Chris
++  if (strstr (uri, "srv_root") != NULL)
+     {
+-      dup2(fd[1],STDOUT_FILENO);
+-      execlp(uri,uri,NULL);
++      // replace with contents of HTML file
++      char *response = html_response (uri, version);
++      write (connfd, response, strlen (response));
+     }
+-    close(fd[1]);
+-    char program_buffer[1024];
+-    char* entire_file = strdup("");
+-    int bytes_read;
+-    while((bytes_read = read(fd[0],program_buffer,1023)) > 0)
++
++  else if (strstr (uri, "cgi-bin") != NULL)
+     {
+-      program_buffer[bytes_read] = '\0';
+-      entire_file = realloc(entire_file,strlen(entire_file)+strlen(program_buffer)+1);
+-      strcat(entire_file,program_buffer);    
++      int fd[2];
++      pipe (fd);
++      pid_t child = fork ();
++      if (child == 0)
++        {
++          dup2 (fd[1], STDOUT_FILENO);
++          execlp (uri, uri, NULL);
++        }
++      close (fd[1]);
++      char program_buffer[1024];
++      char *entire_file = strdup ("");
++      int bytes_read;
++      while ((bytes_read = read (fd[0], program_buffer, 1023)) > 0)
++        {
++          program_buffer[bytes_read] = '\0';
++          entire_file = realloc (
++              entire_file, strlen (entire_file) + strlen (program_buffer) + 1);
++          strcat (entire_file, program_buffer);
++        }
++      // write headers before writing entire file
++      // the process of building a header should be in it's own function.
++      size_t filesize = strlen (entire_file);
++      char *header = malloc (strlen (version) + 1);
++      strcpy (header, version);
++
++      char *headers = " 200 OK\r\n"
++                      "Content-Type: text/html; charset=UTF-8\r\n"
++                      "Content-Length: ";
++      // Create a 21-character buffer to store the file size as a string (use
++      // snprintf() to convert the size_t into a char*). We can safely assume
++      // the string version while fit, as size_t is a 64-bit value that has a
++      // maximum value of 18,446,744,073,709,551,615.
++      char size_as_string[21];
++      char *One_point_one_message = "Connection: close\r\n\r\n";
++
++      if (strcmp (version, "HTTP/1.0") == 0)
++        {
++          memset (size_as_string, 0, 21);
++          sprintf (size_as_string, "%ld", filesize);
++          header = realloc (header, strlen (header) + strlen (headers)
++                                        + strlen (size_as_string) + 5);
++          strcat (header, headers);
++          strcat (header, size_as_string);
++          strcat (header, "\r\n\r\n");
++        }
++
++      else if (strcmp (version, "HTTP/1.1") == 0)
++        {
++          memset (size_as_string, 0, 21);
++          snprintf (size_as_string, sizeof (filesize), "%ld", filesize);
++          header = realloc (header, strlen (header) + strlen (headers)
++                                        + strlen (size_as_string)
++                                        + strlen (One_point_one_message));
++          strcat (header, headers);
++          strcat (header, size_as_string);
++          strcat (header, "\r\n");
++          strcat (header, "Connection: close\r\n\r\n");
++        }
++      write (connfd, header, strlen (header)); // write the header
++      write (connfd, entire_file,
++             strlen (entire_file)); // write the entire file
+     }
+-    // write headers before writing entire file
+-    // the process of building a header should be in it's own function.
+-    size_t filesize = strlen(entire_file);
+-    char *header = malloc (strlen (version) + 1);
+-    strcpy (header, version);
+-
+-    char *headers = " 200 OK\r\n"
+-                    "Content-Type: text/html; charset=UTF-8\r\n"
+-                    "Content-Length: ";
+-    // Create a 21-character buffer to store the file size as a string (use
+-    // snprintf() to convert the size_t into a char*). We can safely assume the
+-    // string version while fit, as size_t is a 64-bit value that has a maximum
+-    // value of 18,446,744,073,709,551,615.
+-    char size_as_string[21];
+-    char *One_point_one_message = "Connection: close\r\n\r\n";
+-
+-    if (strcmp (version, "HTTP/1.0") == 0)
+-      {
+-        memset (size_as_string, 0, 21);
+-        sprintf (size_as_string, "%ld", filesize);
+-        header = realloc (header, strlen (header) + strlen (headers)
+-                                      + strlen (size_as_string) + 5);
+-        strcat (header, headers);
+-        strcat (header, size_as_string);
+-        strcat (header, "\r\n\r\n");
+-      }
+-
+-    else if (strcmp (version, "HTTP/1.1") == 0)
+-      {
+-        memset (size_as_string, 0, 21);
+-        snprintf (size_as_string, sizeof (filesize), "%ld", filesize);
+-        header = realloc (header, strlen (header) + strlen (headers)
+-                                      + strlen (size_as_string)
+-                                      + strlen (One_point_one_message));
+-        strcat (header, headers);
+-        strcat (header, size_as_string);
+-        strcat (header, "\r\n");
+-        strcat (header, "Connection: close\r\n\r\n");
+-      }
+-    write(connfd,header,strlen(header)); // write the header
+-    write(connfd,entire_file,strlen(entire_file)); // write the entire file
+-  }
+-  //added by Chris
+-  
++  // added by Chris
++
+   shutdown (connfd, SHUT_RDWR);
+   close (connfd);
+ 

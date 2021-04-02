@@ -1,0 +1,11 @@
+--- ../cgi-src/show.c	2021-03-25 10:44:12.000000000 -0400
++++ ckstyle/show.c.gnu	2021-04-01 21:11:31.429126616 -0400
+@@ -17,7 +17,7 @@
+           "sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/"
+           "iJTQUOhcWr7x9JvoRxT2MZw1T\" crossorigin=\"anonymous\" />\n");
+   printf ("  </head>\n\n");
+-  
++
+   // These variables can be read from the environment using getenv().
+   char *db = NULL;
+   char *record = NULL;
